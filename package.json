@@ -1,0 +1,36 @@
+{
+  "name": "decomp",
+  "private": true,
+  "type": "module",
+  "module": "src/index.ts",
+  "scripts": {
+    "start:prod": "bun run src/index.ts",
+    "start": "SNOOPLOGG=* bun run src/index.ts",
+    "test": "bun test",
+    "check": "bun lint && bun format",
+    "check:fix": "bun lint:fix && bun format:fix",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt",
+    "dk": "drizzle-kit",
+    "dk:migrate:gen": "drizzle-kit generate",
+    "dk:migrate": "drizzle-kit migrate",
+    "dk:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.3",
+    "discord.js": "^14.26.4",
+    "drizzle-kit": "rc4",
+    "drizzle-orm": "rc4",
+    "snooplogg": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "lefthook": "^2.1.6",
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.77.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "typescript": "^7.0.2"
+  }
+}

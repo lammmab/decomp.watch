@@ -1,0 +1,14 @@
+.github
+.git
+.oxlimtrc.json
+.oxfmtrc.json
+.editorconfig
+.vscode
+.env
+.env.example
+docs
+data
+node_modules
+test
+fixtures
+*.test.ts

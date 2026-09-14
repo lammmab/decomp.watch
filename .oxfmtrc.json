@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": ["drizzle/meta/**/*.json"],
+  "printWidth": 100,
+  "singleQuote": false,
+  "sortImports": true
+}
