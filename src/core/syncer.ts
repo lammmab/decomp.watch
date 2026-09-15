@@ -170,6 +170,10 @@ export class ProjectSyncer {
     // Process watchers sequentially to respect Discord rate limits
     for (const watcher of watchers) {
       // eslint-disable-next-line no-await-in-loop
+      const baseline = await this.database.getBaselineForWatcherProject(watcher.id, projectId);
+      if (!baseline || baseline.baselinePercentage >= 100) continue;
+
+      // eslint-disable-next-line no-await-in-loop
       const channel = await this.fetchTextChannel(watcher.channelId);
       if (channel) {
         // eslint-disable-next-line no-await-in-loop
