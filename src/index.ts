@@ -1,17 +1,17 @@
-import "@core/logbuffer";
+import { Decomp } from "@core/decomp";
 import { snooplogg as snoop } from "snooplogg";
-
-import { Decomp } from "./core/decomp";
 
 const decomp = new Decomp();
 await decomp.start(process.env.DISCORD_TOKEN!);
 
 process.on("SIGINT", async () => {
+  decomp.stop();
   decomp.database.close();
   process.exit(0);
 });
 
 process.on("SIGTERM", async () => {
+  decomp.stop();
   decomp.database.close();
   process.exit(0);
 });

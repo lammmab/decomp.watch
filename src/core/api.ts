@@ -23,16 +23,16 @@ const platforms = {
 } as const;
 
 /** A known platform identifier, e.g. `"n64"` or `"switch"`. */
-type PlatformId = keyof typeof platforms;
+export type PlatformId = keyof typeof platforms;
 
 /** A human-readable platform name, e.g. `"Nintendo 64"`. */
-type PlatformName = (typeof platforms)[PlatformId];
+export type PlatformName = (typeof platforms)[PlatformId];
 
 /**
  * A decomp.dev project: a reverse-engineering effort tracked for a
  * specific game/platform combination.
  */
-interface DecompProject {
+export interface DecompProject {
   /** Unique numeric identifier for the project. */
   id: number;
 
@@ -40,7 +40,7 @@ interface DecompProject {
   platformId: PlatformId;
 
   /** Human-readable platform name, e.g. `"Nintendo 64"`. */
-  platformName: PlatformName | string;
+  platformName: string;
 
   /** URL or `owner/repo` slug of the project's source repository. */
   repository: string;
@@ -67,7 +67,7 @@ interface RawDecompMeasures {
 /**
  * A decomp project enriched with decompilation progress data.
  */
-interface DecompStatus extends DecompProject {
+export interface DecompStatus extends DecompProject {
   /** URL to the project's treemap visualization (SVG). */
   treemapUrl: string;
 
@@ -91,7 +91,7 @@ interface DecompStatus extends DecompProject {
 
   /** Number of functions matched so far. */
   matchedFunctions: number;
-};
+}
 
 /** Raw shape of a single project as returned by the decomp.dev API. */
 interface RawDecompProject {
@@ -111,6 +111,7 @@ interface RawDecompProject {
   };
   report_versions: string[];
   report_categories: unknown[];
+  measures: RawDecompMeasures;
 }
 
 /**
@@ -125,8 +126,12 @@ interface RawDecompProject {
  * getPlatformName("ps3"); // "ps3" (fallback, unknown platform)
  * ```
  */
-function getPlatformName(id: string): PlatformName | string {
-  return platforms[id as PlatformId] ?? id;
+function getPlatformName(id: string): string {
+  type PlatformKey = keyof typeof platforms;
+  if (id in platforms) {
+    return platforms[id as PlatformKey];
+  }
+  return id;
 }
 
 const DECOMP_BASE_URL = "https://decomp.dev";
@@ -143,7 +148,7 @@ function buildMeasuresUrl(id: number): string {
  * Builds the decomp.dev treemap SVG URL for a project.
  */
 function buildTreemapUrl(id: number): string {
-  return `${DECOMP_BASE_URL}/projects/${id}.svg?mode=overview`;
+  return `${DECOMP_BASE_URL}/projects/${id}.png?mode=overview`;
 }
 
 /**
@@ -153,7 +158,7 @@ function buildTreemapUrl(id: number): string {
  * @returns A promise resolving to the parsed project list.
  * @throws If the request fails or the response is not OK.
  */
-export async function getProjects(): Promise<DecompProject[]> {
+export async function getProjects(): Promise<DecompStatus[]> {
   const res = await fetch(DECOMP_PROJECTS_URL, {
     headers: { Accept: "application/json" },
   });
@@ -162,15 +167,34 @@ export async function getProjects(): Promise<DecompProject[]> {
     throw new Error(`Failed to fetch projects: ${res.status} ${res.statusText}`);
   }
 
-  const data: RawDecompProject[] = await res.json();
+  const data: unknown = await res.json();
+  if (!data || typeof data !== "object" || !("projects" in data)) {
+    throw new Error("Invalid response format");
+  }
 
-  return data.map((project): DecompProject => ({
-    id: project.id,
-    platformId: project.platform as PlatformId,
-    platformName: getPlatformName(project.platform),
-    repository: project.repo_url,
-    displayName: project.short_name ?? project.name,
-  }));
+  type ResponseData = { projects: RawDecompProject[] };
+  const { projects } = data as ResponseData;
+
+  return projects.map((project): DecompStatus => {
+    type PlatformKey = keyof typeof platforms;
+    const platformId: PlatformId =
+      project.platform in platforms ? (project.platform as PlatformKey) : "n64";
+    return {
+      id: project.id,
+      platformId,
+      platformName: getPlatformName(project.platform),
+      repository: project.repo_url,
+      displayName: project.short_name ?? project.name,
+      treemapUrl: buildTreemapUrl(project.id),
+      percentage: project.measures.matched_code_percent,
+      fuzzyMatchPercent: project.measures.fuzzy_match_percent,
+      matchedFunctionsPercent: project.measures.matched_functions_percent,
+      matchedDataPercent: project.measures.matched_data_percent,
+      totalUnits: project.measures.total_units,
+      totalFunctions: project.measures.total_functions,
+      matchedFunctions: project.measures.matched_functions,
+    };
+  });
 }
 
 /**
@@ -188,11 +212,11 @@ export async function getProjectStatus(project: DecompProject): Promise<DecompSt
 
   if (!res.ok) {
     throw new Error(
-      `Failed to fetch status for project ${project.id}: ${res.status} ${res.statusText}`
+      `Failed to fetch status for project ${project.id}: ${res.status} ${res.statusText}`,
     );
   }
 
-  const measures: RawDecompMeasures = await res.json();
+  const measures = (await res.json()) as RawDecompMeasures;
 
   return {
     ...project,
@@ -205,4 +229,52 @@ export async function getProjectStatus(project: DecompProject): Promise<DecompSt
     totalFunctions: measures.total_functions,
     matchedFunctions: measures.matched_functions,
   };
+}
+
+const GITHUB_PREFIX = "https://github.com/";
+
+/**
+ * Normalizes a repo reference into a full GitHub URL. Accepts either
+ * a full URL or an `owner/repo` shorthand. Case-insensitive and
+ * tolerant of extra whitespace or stray leading/trailing slashes.
+ *
+ * @example
+ * normalizeRepoUrl("zeldaret/tww"); // "https://github.com/zeldaret/tww"
+ * normalizeRepoUrl("  ZeldaRet/TWW/ "); // "https://github.com/zeldaret/tww"
+ * normalizeRepoUrl("https://github.com/zeldaret/tww"); // unchanged (lowercased)
+ */
+export function normalizeRepoUrl(input: string): string {
+  const trimmed = input
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, "");
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `${GITHUB_PREFIX}${trimmed}`;
+}
+
+/**
+ * Resolves a user-provided platform name or id into a known
+ * {@link PlatformId}. Case-insensitive; matches either the short id
+ * (e.g. `"n64"`) or the display name (e.g. `"Nintendo 64"`).
+ *
+ * @param input Freeform platform text, as typed by a user.
+ * @returns The matching platform id, or `undefined` if no platform matches.
+ *
+ * @example
+ * resolvePlatformId("n64"); // "n64"
+ * resolvePlatformId("Nintendo 64"); // "n64"
+ * resolvePlatformId("dreamcast"); // undefined
+ */
+export function resolvePlatformId(input: string): PlatformId | undefined {
+  const normalized = input.trim().toLowerCase();
+  const entry = Object.entries(platforms).find(
+    ([id, name]) => id.toLowerCase() === normalized || name.toLowerCase() === normalized,
+  );
+  if (!entry) return undefined;
+  const [key] = entry;
+  type PlatformKey = keyof typeof platforms;
+  if (key in platforms) {
+    return key as PlatformKey;
+  }
+  return undefined;
 }

@@ -27,7 +27,7 @@
     "paths": {
       "@core/*": ["./src/core/*"],
       "@routing/*": ["./src/routing/*"],
-      "@utility/*": ["./src/utils/*"],
+      "@utility/*": ["./src/util/*"],
       "@db/*": ["./src/db/*"],
       "@bridge/*": ["./src/bridge/*"]
     }
