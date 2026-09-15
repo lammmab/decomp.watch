@@ -1,4 +1,4 @@
-import { getProjects, platforms } from "@core/api";
+import { platforms } from "@core/api";
 import type { Decomp } from "@core/decomp";
 import type { DecompCommand } from "@routing/router";
 import {
@@ -12,7 +12,7 @@ import { handleGet } from "./get";
 import { handleWatchPlatform, handleWatchRepo } from "./watch";
 
 export async function handleAutocomplete(
-  _decomp: Decomp,
+  decomp: Decomp,
   interaction: AutocompleteInteraction,
 ): Promise<void> {
   const focused = interaction.options.getFocused(true);
@@ -30,7 +30,7 @@ export async function handleAutocomplete(
   } else if (focused.name === "project") {
     const input = focused.value.toLowerCase();
     try {
-      const projects = await getProjects();
+      const projects = await decomp.database.getAllProjects();
       const filtered = projects
         .filter((project) => {
           const repoLower = project.repository.toLowerCase();

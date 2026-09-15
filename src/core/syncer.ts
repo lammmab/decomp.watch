@@ -42,7 +42,14 @@ export class ProjectSyncer {
         platformName: status.platformName,
         repository: status.repository,
         displayName: status.displayName,
+        treemapUrl: status.treemapUrl,
         percentage: status.percentage,
+        fuzzyMatchPercent: status.fuzzyMatchPercent,
+        matchedFunctionsPercent: status.matchedFunctionsPercent,
+        matchedDataPercent: status.matchedDataPercent,
+        totalUnits: status.totalUnits,
+        totalFunctions: status.totalFunctions,
+        matchedFunctions: status.matchedFunctions,
       });
 
       if (watchers.length === 0) continue;

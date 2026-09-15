@@ -11,7 +11,14 @@ export const projects = sqliteTable("projects", {
   repository: text("repository").notNull(),
   displayName: text("display_name").notNull(),
 
+  treemapUrl: text("treemap_url").notNull(),
   percentage: real("percentage").notNull(),
+  fuzzyMatchPercent: real("fuzzy_match_percent").notNull(),
+  matchedFunctionsPercent: real("matched_functions_percent").notNull(),
+  matchedDataPercent: real("matched_data_percent").notNull(),
+  totalUnits: integer("total_units").notNull(),
+  totalFunctions: integer("total_functions").notNull(),
+  matchedFunctions: integer("matched_functions").notNull(),
 
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()

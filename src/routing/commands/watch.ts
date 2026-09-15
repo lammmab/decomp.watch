@@ -1,11 +1,6 @@
-import {
-  resolvePlatformId,
-  normalizeRepoUrl,
-  getProjectStatus,
-  type DecompStatus,
-} from "@core/api";
+import { resolvePlatformId, normalizeRepoUrl } from "@core/api";
 import type { Decomp } from "@core/decomp";
-import { projectEmbed, type Project } from "@utility/embed";
+import { projectEmbed } from "@utility/embed";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { MessageFlags, TextChannel } from "discord.js";
 import { snooplogg as snoop } from "snooplogg";
@@ -50,8 +45,15 @@ export async function handleWatchRepo(decomp: Decomp, interaction: ChatInputComm
       await decomp.database.createBaseline(watcher.id, project.id, project.percentage);
 
       try {
-        const status = await getProjectStatus(project);
-        const embed = projectEmbed(toEmbedProject(status));
+        const embed = projectEmbed({
+          name: project.displayName,
+          matchedPercent: project.percentage,
+          fuzzyMatchedPercent: project.fuzzyMatchPercent,
+          matchedFunctions: project.matchedFunctions,
+          totalFunctions: project.totalFunctions,
+          projectUrl: project.repository,
+          treemapUrl: project.treemapUrl,
+        });
         const textChannel = await decomp.client.channels.fetch(channel.id);
         if (textChannel instanceof TextChannel) {
           const message = await textChannel.send({ embeds: [embed] });
@@ -112,16 +114,4 @@ export async function handleWatchPlatform(
       );
     }
   }
-}
-
-function toEmbedProject(status: DecompStatus): Project {
-  return {
-    name: status.displayName,
-    matchedPercent: status.percentage,
-    fuzzyMatchedPercent: status.fuzzyMatchPercent,
-    matchedFunctions: status.matchedFunctions,
-    totalFunctions: status.totalFunctions,
-    projectUrl: status.repository,
-    treemapUrl: status.treemapUrl,
-  };
 }

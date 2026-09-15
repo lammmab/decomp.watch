@@ -1,4 +1,4 @@
-import { getProjectStatus, normalizeRepoUrl, type DecompProject } from "@core/api";
+import { normalizeRepoUrl } from "@core/api";
 import type { Decomp } from "@core/decomp";
 import { projectEmbed } from "@utility/embed";
 import type { ChatInputCommandInteraction } from "discord.js";
@@ -17,32 +17,14 @@ export async function handleGet(decomp: Decomp, interaction: ChatInputCommandInt
     return;
   }
 
-  const asDecompProject: DecompProject = {
-    id: project.id,
-    platformId: project.platformId,
-    platformName: project.platformName,
-    repository: project.repository,
-    displayName: project.displayName,
-  };
-
-  let status;
-  try {
-    status = await getProjectStatus(asDecompProject);
-  } catch {
-    await interaction.editReply({
-      content: "Failed to fetch live status from decomp.dev. Try again shortly.",
-    });
-    return;
-  }
-
   const embed = projectEmbed({
     name: project.displayName,
-    matchedPercent: status.percentage,
-    fuzzyMatchedPercent: status.fuzzyMatchPercent,
-    matchedFunctions: status.matchedFunctions,
-    totalFunctions: status.totalFunctions,
+    matchedPercent: project.percentage,
+    fuzzyMatchedPercent: project.fuzzyMatchPercent,
+    matchedFunctions: project.matchedFunctions,
+    totalFunctions: project.totalFunctions,
     projectUrl: project.repository,
-    treemapUrl: status.treemapUrl,
+    treemapUrl: project.treemapUrl,
   });
 
   await interaction.editReply({ embeds: [embed] });
