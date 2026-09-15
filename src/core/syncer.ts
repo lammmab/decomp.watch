@@ -1,7 +1,7 @@
 import { getProjects, type DecompStatus } from "@core/api";
 import { DecompDatabase } from "@db/database";
 import { completedEmbed, milestoneEmbed, projectEmbed, type Project } from "@utility/embed";
-import { Client, TextChannel } from "discord.js";
+import { ActivityType, Client, TextChannel } from "discord.js";
 import { snooplogg as snoop } from "snooplogg";
 
 function toEmbedProject(status: DecompStatus): Project {
@@ -61,6 +61,19 @@ export class ProjectSyncer {
       // eslint-disable-next-line no-await-in-loop
       await this.notifyMilestones(status.id, status.platformId, status.percentage, embedProject);
     }
+
+    const projectCount = await this.database.getProjectCount();
+
+    this.client.user?.setPresence({
+      activities: [
+        {
+          name: "customstatus",
+          state: `Watching ${projectCount} decompilation projects 👀`,
+          type: ActivityType.Custom,
+        },
+      ],
+      status: "online",
+    });
 
     this.firstLoad = false;
   }

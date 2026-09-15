@@ -59,6 +59,21 @@ export class DecompDatabase {
     return await this.db.select().from(schema.projects).orderBy(desc(schema.projects.percentage));
   }
 
+  public async getProjectCount(): Promise<number> {
+    const [row] = await this.db.select({ count: sql<number>`count(*)` }).from(schema.projects);
+    return row?.count ?? 0;
+  }
+
+  public async getProjectCountByPlatform(
+    platformId: typeof schema.projects.$inferSelect.platformId,
+  ): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.projects)
+      .where(eq(schema.projects.platformId, platformId));
+    return row?.count ?? 0;
+  }
+
   public async getProjectsByPlatform(platformId: string) {
     return await this.db
       .select()
