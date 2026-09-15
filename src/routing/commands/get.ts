@@ -7,7 +7,7 @@ import { MessageFlags } from "discord.js";
 export async function handleGet(decomp: Decomp, interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const repoUrl = normalizeRepoUrl(interaction.options.getString("repo_url", true));
+  const repoUrl = normalizeRepoUrl(interaction.options.getString("project", true));
 
   const project = await decomp.database.getProjectByRepository(repoUrl);
   if (!project) {

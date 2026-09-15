@@ -27,7 +27,7 @@ export async function handleAutocomplete(
       .filter((platform) => platform.name.toLowerCase().includes(input))
       .slice(0, 25);
     await interaction.respond(filtered);
-  } else if (focused.name === "repo_url") {
+  } else if (focused.name === "project") {
     const input = focused.value.toLowerCase();
     try {
       const projects = await getProjects();
@@ -117,8 +117,8 @@ export default {
         .setDescription("Get a project's current decompilation status")
         .addStringOption((option) =>
           option
-            .setName("repo_url")
-            .setDescription("The project's repository URL")
+            .setName("project")
+            .setDescription("The project's repository URL or name")
             .setRequired(true)
             .setAutocomplete(true),
         ),

@@ -95,7 +95,17 @@ export class DecompDatabase {
     const [row] = await this.db
       .insert(schema.watchers)
       .values(watcher)
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: [
+          schema.watchers.guildId,
+          schema.watchers.channelId,
+          schema.watchers.projectIdNorm,
+          schema.watchers.platformIdNorm,
+        ],
+        set: {
+          interval: watcher.interval,
+        },
+      })
       .returning();
     return row;
   }

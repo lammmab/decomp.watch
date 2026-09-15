@@ -43,7 +43,6 @@ export const watchers = sqliteTable(
       table.channelId,
       table.projectIdNorm,
       table.platformIdNorm,
-      table.interval,
     ),
   }),
 );
