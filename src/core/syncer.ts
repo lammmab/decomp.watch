@@ -1,6 +1,13 @@
+/* eslint-disable-next-line no-await-in-loop */
 import { getProjects, type DecompStatus } from "@core/api";
 import { DecompDatabase } from "@db/database";
-import { completedEmbed, milestoneEmbed, projectEmbed, type Project } from "@utility/embed";
+import {
+  completedEmbed,
+  milestoneEmbed,
+  platformEmbed,
+  projectEmbed,
+  type Project,
+} from "@utility/embed";
 import { ActivityType, Client, TextChannel } from "discord.js";
 import { snooplogg as snoop } from "snooplogg";
 
@@ -28,14 +35,13 @@ export class ProjectSyncer {
 
   public async sync() {
     const statuses = await getProjects();
+    const platformsWithWatchers = new Set<string>();
 
     // Process projects sequentially to avoid overwhelming the database and Discord API
     for (const status of statuses) {
-      // eslint-disable-next-line no-await-in-loop
       const watchers = await this.database.getWatchersForProject(status.id, status.platformId);
       if (!this.firstLoad && watchers.length === 0) continue;
 
-      // eslint-disable-next-line no-await-in-loop
       await this.database.upsertProject({
         id: status.id,
         platformId: status.platformId,
@@ -57,10 +63,9 @@ export class ProjectSyncer {
       // Create baselines for new projects appearing on watched platforms
       for (const watcher of watchers) {
         if (watcher.platformId) {
-          // eslint-disable-next-line no-await-in-loop
+          platformsWithWatchers.add(watcher.platformId);
           const baseline = await this.database.getBaselineForWatcherProject(watcher.id, status.id);
           if (!baseline) {
-            // eslint-disable-next-line no-await-in-loop
             await this.database.createBaseline(watcher.id, status.id, status.percentage);
           }
         }
@@ -68,18 +73,19 @@ export class ProjectSyncer {
 
       const embedProject = toEmbedProject(status);
 
-      // eslint-disable-next-line no-await-in-loop
+      // Update only project-specific watchers (platform watchers are updated in bulk later)
       await this.updatePersistentEmbed(status.id, embedProject);
 
       if (status.percentage >= 100) {
-        // eslint-disable-next-line no-await-in-loop
         await this.announceCompletion(status.id, status.platformId, embedProject);
         continue;
       }
 
-      // eslint-disable-next-line no-await-in-loop
       await this.notifyMilestones(status.id, status.platformId, status.percentage, embedProject);
     }
+
+    // Update all platform watchers with combined embeds
+    await this.updateAllPlatformWatchers(platformsWithWatchers);
 
     const projectCount = await this.database.getProjectCount();
 
@@ -99,19 +105,18 @@ export class ProjectSyncer {
 
   private async updatePersistentEmbed(projectId: number, embedProject: Project) {
     const watchers = await this.database.getWatchersForProject(projectId, embedProject.name);
+    // platform watchers are handled separately
+    const projectWatchers = watchers.filter((w) => w.projectId !== null);
     const embed = projectEmbed(embedProject);
 
     // Process watchers sequentially to respect Discord rate limits
-    for (const watcher of watchers) {
-      // eslint-disable-next-line no-await-in-loop
+    for (const watcher of projectWatchers) {
       const channel = await this.fetchTextChannel(watcher.channelId);
       if (!channel) continue;
 
       if (watcher.trackingMessageId) {
         try {
-          // eslint-disable-next-line no-await-in-loop
           const message = await channel.messages.fetch(watcher.trackingMessageId);
-          // eslint-disable-next-line no-await-in-loop
           await message.edit({ embeds: [embed] });
           continue;
         } catch (error) {
@@ -122,9 +127,7 @@ export class ProjectSyncer {
         }
       }
 
-      // eslint-disable-next-line no-await-in-loop
       const message = await channel.send({ embeds: [embed] });
-      // eslint-disable-next-line no-await-in-loop
       await this.database.setTrackingMessageId(watcher.id, message.id);
     }
   }
@@ -139,7 +142,6 @@ export class ProjectSyncer {
 
     // Process watchers sequentially to respect Discord rate limits
     for (const watcher of relevant) {
-      // eslint-disable-next-line no-await-in-loop
       const baseline = await this.database.getBaselineForWatcherProject(watcher.id, projectId);
       if (!baseline) continue;
 
@@ -152,13 +154,10 @@ export class ProjectSyncer {
         milestonePercentage > baseline.baselinePercentage;
 
       if (shouldNotify) {
-        // eslint-disable-next-line no-await-in-loop
         const channel = await this.fetchTextChannel(watcher.channelId);
         if (channel) {
-          // eslint-disable-next-line no-await-in-loop
           await channel.send({ embeds: [milestoneEmbed(embedProject, milestonePercentage)] });
         }
-        // eslint-disable-next-line no-await-in-loop
         await this.database.updateBaselineNotified(watcher.id, projectId, currentStep);
       }
     }
@@ -169,14 +168,11 @@ export class ProjectSyncer {
 
     // Process watchers sequentially to respect Discord rate limits
     for (const watcher of watchers) {
-      // eslint-disable-next-line no-await-in-loop
       const baseline = await this.database.getBaselineForWatcherProject(watcher.id, projectId);
       if (!baseline || baseline.baselinePercentage >= 100) continue;
 
-      // eslint-disable-next-line no-await-in-loop
       const channel = await this.fetchTextChannel(watcher.channelId);
       if (channel) {
-        // eslint-disable-next-line no-await-in-loop
         await channel.send({ embeds: [completedEmbed(embedProject)] });
       }
     }
@@ -191,6 +187,43 @@ export class ProjectSyncer {
     } catch (error) {
       snoop.error(`Failed to fetch channel ${channelId}:`, error);
       return undefined;
+    }
+  }
+
+  private async updateAllPlatformWatchers(platformIds: Set<string>) {
+    for (const platformId of platformIds) {
+      const projects = await this.database.getProjectsByPlatform(platformId);
+      if (projects.length === 0) continue;
+
+      const platformName = projects[0]?.platformName ?? platformId;
+      const embedProjects: Project[] = projects.map(toEmbedProject);
+      const embeds = platformEmbed(platformName, embedProjects);
+
+      const watchers = await this.database.getWatchersForProject(0, platformId);
+      const platformWatchers = watchers.filter(
+        (w) => w.projectId === null && w.platformId === platformId,
+      );
+
+      for (const watcher of platformWatchers) {
+        const channel = await this.fetchTextChannel(watcher.channelId);
+        if (!channel) continue;
+
+        if (watcher.trackingMessageId) {
+          try {
+            const message = await channel.messages.fetch(watcher.trackingMessageId);
+            await message.edit({ embeds });
+            continue;
+          } catch (error) {
+            snoop.error(
+              `Failed to edit platform tracking message for watcher ${watcher.id}, resending:`,
+              error,
+            );
+          }
+        }
+
+        const message = await channel.send({ embeds });
+        await this.database.setTrackingMessageId(watcher.id, message.id);
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import { resolvePlatformId, normalizeRepoUrl } from "@core/api";
 import type { Decomp } from "@core/decomp";
-import { projectEmbed } from "@utility/embed";
+import { platformEmbed, projectEmbed, type Project } from "@utility/embed";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { MessageFlags, TextChannel } from "discord.js";
 import { snooplogg as snoop } from "snooplogg";
@@ -112,6 +112,27 @@ export async function handleWatchPlatform(
           decomp.database.createBaseline(watcher.id, project.id, project.percentage),
         ),
       );
+
+      try {
+        const embedProjects: Project[] = projects.map((project) => ({
+          name: project.displayName,
+          matchedPercent: project.percentage,
+          fuzzyMatchedPercent: project.fuzzyMatchPercent,
+          matchedFunctions: project.matchedFunctions,
+          totalFunctions: project.totalFunctions,
+          projectUrl: project.repository,
+          treemapUrl: project.treemapUrl,
+        }));
+
+        const embeds = platformEmbed(platformName, embedProjects);
+        const textChannel = await decomp.client.channels.fetch(channel.id);
+        if (textChannel instanceof TextChannel) {
+          const message = await textChannel.send({ embeds });
+          await decomp.database.setTrackingMessageId(watcher.id, message.id);
+        }
+      } catch (error) {
+        snoop.error(`Failed to post initial platform embed for ${platformId}:`, error);
+      }
     }
   }
 }

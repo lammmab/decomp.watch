@@ -20,6 +20,50 @@ export interface Project {
 const AUTHOR = "Decompilation Tracking";
 const AUTHOR_URL = "https://decomp.dev";
 
+export function platformEmbed(platform: string, projects: Project[]): EmbedBuilder[] {
+  const completed = projects.filter((project) => project.matchedPercent >= 100).length;
+
+  const completionPercent = projects.length > 0 ? (completed / projects.length) * 100 : 0;
+
+  const embeds: EmbedBuilder[] = [];
+  const FIELDS_PER_EMBED = 25;
+
+  // Split projects into chunks of 25
+  for (let i = 0; i < projects.length; i += FIELDS_PER_EMBED) {
+    const chunk = projects.slice(i, i + FIELDS_PER_EMBED);
+    const isFirst = i === 0;
+
+    const embed = new EmbedBuilder().setColor(0x237feb);
+
+    if (isFirst) {
+      embed
+        .setAuthor({
+          name: AUTHOR,
+          url: AUTHOR_URL,
+        })
+        .setTitle(`All ${platform} Projects`)
+        .setDescription(
+          `${completed} / ${projects.length} ${platform} games have been ` +
+            `100% decompiled. (${completionPercent.toFixed(2)}%)`,
+        );
+    }
+
+    for (const project of chunk) {
+      embed.addFields({
+        name: project.name,
+        value:
+          `**${project.matchedPercent.toFixed(2)}%** matched | ` +
+          `**${project.fuzzyMatchedPercent.toFixed(2)}%** fuzzy matched | ` +
+          `**${project.matchedFunctions} / ${project.totalFunctions}** functions matched`,
+      });
+    }
+
+    embeds.push(embed);
+  }
+
+  return embeds;
+}
+
 export function projectEmbed(project: Project): EmbedBuilder {
   return new EmbedBuilder()
     .setAuthor({
