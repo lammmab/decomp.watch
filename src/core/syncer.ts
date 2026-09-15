@@ -68,7 +68,7 @@ export class ProjectSyncer {
       activities: [
         {
           name: "customstatus",
-          state: `Watching ${projectCount} decompilation projects 👀`,
+          state: `Watching ${projectCount} decomps 👀`,
           type: ActivityType.Custom,
         },
       ],

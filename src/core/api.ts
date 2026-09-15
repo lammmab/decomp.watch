@@ -9,7 +9,7 @@
  * Maps a platform's short identifier (as returned by the decomp.dev API)
  * to its human-readable display name.
  */
-const platforms = {
+export const platforms = {
   n64: "Nintendo 64",
   wii: "Wii",
   gc: "GameCube",
