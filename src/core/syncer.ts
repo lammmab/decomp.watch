@@ -47,6 +47,18 @@ export class ProjectSyncer {
 
       if (watchers.length === 0) continue;
 
+      // Create baselines for new projects appearing on watched platforms
+      for (const watcher of watchers) {
+        if (watcher.platformId) {
+          // eslint-disable-next-line no-await-in-loop
+          const baseline = await this.database.getBaselineForWatcherProject(watcher.id, status.id);
+          if (!baseline) {
+            // eslint-disable-next-line no-await-in-loop
+            await this.database.createBaseline(watcher.id, status.id, status.percentage);
+          }
+        }
+      }
+
       const embedProject = toEmbedProject(status);
 
       // eslint-disable-next-line no-await-in-loop
@@ -117,22 +129,31 @@ export class ProjectSyncer {
     embedProject: Project,
   ) {
     const relevant = await this.database.getWatchersForProject(projectId, platformId);
-    const triggered = relevant.filter((w) => {
-      const currentStep = Math.floor(percentage / w.interval);
-      return currentStep > w.lastNotifiedStep && currentStep >= 1;
-    });
 
-    // Process triggered watchers sequentially to respect Discord rate limits
-    for (const watcher of triggered) {
+    // Process watchers sequentially to respect Discord rate limits
+    for (const watcher of relevant) {
       // eslint-disable-next-line no-await-in-loop
-      const channel = await this.fetchTextChannel(watcher.channelId);
-      if (channel) {
-        const step = Math.floor(percentage / watcher.interval) * watcher.interval;
+      const baseline = await this.database.getBaselineForWatcherProject(watcher.id, projectId);
+      if (!baseline) continue;
+
+      const currentStep = Math.floor(percentage / watcher.interval);
+      const milestonePercentage = currentStep * watcher.interval;
+
+      const shouldNotify =
+        currentStep > baseline.lastNotifiedStep &&
+        currentStep >= 1 &&
+        milestonePercentage > baseline.baselinePercentage;
+
+      if (shouldNotify) {
         // eslint-disable-next-line no-await-in-loop
-        await channel.send({ embeds: [milestoneEmbed(embedProject, step)] });
+        const channel = await this.fetchTextChannel(watcher.channelId);
+        if (channel) {
+          // eslint-disable-next-line no-await-in-loop
+          await channel.send({ embeds: [milestoneEmbed(embedProject, milestonePercentage)] });
+        }
+        // eslint-disable-next-line no-await-in-loop
+        await this.database.updateBaselineNotified(watcher.id, projectId, currentStep);
       }
-      // eslint-disable-next-line no-await-in-loop
-      await this.database.markWatcherNotified(watcher.id, percentage);
     }
   }
 

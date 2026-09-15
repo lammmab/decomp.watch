@@ -138,14 +138,6 @@ export class DecompDatabase {
       );
   }
 
-  public async getTriggeredWatchers(percentage: number) {
-    const all = await this.db.select().from(schema.watchers);
-    return all.filter((w) => {
-      const currentStep = Math.floor(percentage / w.interval);
-      return currentStep > w.lastNotifiedStep && currentStep >= 1;
-    });
-  }
-
   public async setTrackingMessageId(id: number, messageId: string) {
     const [row] = await this.db
       .update(schema.watchers)
@@ -155,27 +147,50 @@ export class DecompDatabase {
     return row;
   }
 
-  public async markWatcherNotified(id: number, percentage: number) {
-    const interval = (
-      await this.db.query.watchers.findFirst({
-        where: eq(schema.watchers.id, id),
-      })
-    )?.interval;
-    if (!interval) return undefined;
-
-    const currentStep = Math.floor(percentage / interval);
-
-    const [row] = await this.db
-      .update(schema.watchers)
-      .set({ lastNotifiedStep: currentStep })
-      .where(eq(schema.watchers.id, id))
-      .returning();
-    return row;
-  }
-
   public async getProjectByRepository(repository: string) {
     return await this.db.query.projects.findFirst({
       where: sql`LOWER(${schema.projects.repository}) = ${repository.toLowerCase()}`,
     });
+  }
+
+  // == Watcher Baselines ==
+
+  public async createBaseline(watcherId: number, projectId: number, baselinePercentage: number) {
+    const [row] = await this.db
+      .insert(schema.watcherBaselines)
+      .values({ watcherId, projectId, baselinePercentage })
+      .onConflictDoNothing()
+      .returning();
+    return row;
+  }
+
+  public async getBaselinesForWatcher(watcherId: number) {
+    return await this.db
+      .select()
+      .from(schema.watcherBaselines)
+      .where(eq(schema.watcherBaselines.watcherId, watcherId));
+  }
+
+  public async getBaselineForWatcherProject(watcherId: number, projectId: number) {
+    return await this.db.query.watcherBaselines.findFirst({
+      where: and(
+        eq(schema.watcherBaselines.watcherId, watcherId),
+        eq(schema.watcherBaselines.projectId, projectId),
+      ),
+    });
+  }
+
+  public async updateBaselineNotified(watcherId: number, projectId: number, step: number) {
+    const [row] = await this.db
+      .update(schema.watcherBaselines)
+      .set({ lastNotifiedStep: step })
+      .where(
+        and(
+          eq(schema.watcherBaselines.watcherId, watcherId),
+          eq(schema.watcherBaselines.projectId, projectId),
+        ),
+      )
+      .returning();
+    return row;
   }
 }

@@ -19,8 +19,6 @@ export const watchers = sqliteTable(
 
     interval: integer("interval").notNull(),
 
-    lastNotifiedStep: integer("last_notified_step").notNull().default(0),
-
     trackingMessageId: text("tracking_message_id"),
 
     createdAt: integer("created_at", { mode: "timestamp" })

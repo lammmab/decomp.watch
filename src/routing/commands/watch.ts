@@ -47,6 +47,8 @@ export async function handleWatchRepo(decomp: Decomp, interaction: ChatInputComm
     });
 
     if (watcher) {
+      await decomp.database.createBaseline(watcher.id, project.id, project.percentage);
+
       try {
         const status = await getProjectStatus(project);
         const embed = projectEmbed(toEmbedProject(status));
@@ -82,7 +84,7 @@ export async function handleWatchPlatform(
   const existing = await decomp.database.getWatchersForChannel(interaction.guildId!, channel.id);
   const alreadyWatching = existing.find((w) => w.projectId === null && w.platformId === platformId);
 
-  await decomp.watchers.register({
+  const watcher = await decomp.watchers.register({
     guildId: interaction.guildId!,
     channelId: channel.id,
     projectId: null,
@@ -100,6 +102,15 @@ export async function handleWatchPlatform(
       content: `Now watching all **${platformName}** projects in <#${channel.id}>, every **${interval}%**.`,
       flags: MessageFlags.Ephemeral,
     });
+
+    if (watcher) {
+      const projects = await decomp.database.getProjectsByPlatform(platformId);
+      await Promise.all(
+        projects.map((project) =>
+          decomp.database.createBaseline(watcher.id, project.id, project.percentage),
+        ),
+      );
+    }
   }
 }
 
