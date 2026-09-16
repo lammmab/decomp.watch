@@ -3,9 +3,20 @@ import type { Decomp } from "@core/decomp";
 import { platformEmbed, projectEmbed, type Project } from "@utility/embed";
 import { logger } from "@utility/log-buffer";
 import type { ChatInputCommandInteraction } from "discord.js";
-import { MessageFlags, TextChannel } from "discord.js";
+import { MessageFlags, PermissionFlagsBits, TextChannel } from "discord.js";
 
 export async function handleWatchRepo(decomp: Decomp, interaction: ChatInputCommandInteraction) {
+  if (
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) &&
+    interaction.inGuild()
+  ) {
+    await interaction.reply({
+      content: "You need the **Manage Channels** permission to use this command.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   const repoUrl = normalizeRepoUrl(interaction.options.getString("project", true));
   const channel = interaction.options.getChannel("channel", true);
   const interval = interaction.options.getInteger("milestone_interval", true);
@@ -96,6 +107,17 @@ export async function handleWatchPlatform(
   decomp: Decomp,
   interaction: ChatInputCommandInteraction,
 ) {
+  if (
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) &&
+    interaction.inGuild()
+  ) {
+    await interaction.reply({
+      content: "You need the **Manage Channels** permission to use this command.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   const platformName = interaction.options.getString("platform_name", true);
   const channel = interaction.options.getChannel("channel", true);
   const interval = interaction.options.getInteger("milestone_interval", true);

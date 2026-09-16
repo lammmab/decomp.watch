@@ -1,9 +1,20 @@
 import { resolvePlatformId, normalizeRepoUrl } from "@core/api";
 import type { Decomp } from "@core/decomp";
 import type { ChatInputCommandInteraction } from "discord.js";
-import { MessageFlags } from "discord.js";
+import { MessageFlags, PermissionFlagsBits } from "discord.js";
 
 export async function handleUnwatchRepo(decomp: Decomp, interaction: ChatInputCommandInteraction) {
+  if (
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) &&
+    interaction.inGuild()
+  ) {
+    await interaction.reply({
+      content: "You need the **Manage Channels** permission to use this command.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   const repoUrl = normalizeRepoUrl(interaction.options.getString("project", true));
   const channel = interaction.options.getChannel("channel", true);
 
@@ -39,6 +50,17 @@ export async function handleUnwatchPlatform(
   decomp: Decomp,
   interaction: ChatInputCommandInteraction,
 ) {
+  if (
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) &&
+    interaction.inGuild()
+  ) {
+    await interaction.reply({
+      content: "You need the **Manage Channels** permission to use this command.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   const platformName = interaction.options.getString("platform_name", true);
   const channel = interaction.options.getChannel("channel", true);
 
