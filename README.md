@@ -55,3 +55,11 @@ npx drizzle-kit generate
 ```bash
 bun run start
 ```
+
+## Docker
+
+```bash
+docker compose up -d
+```
+
+Data persists to `./data` on the host.

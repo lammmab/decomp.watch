@@ -38,7 +38,7 @@ export class Decomp {
       partials: [],
     });
     this.router = new DecompRouter();
-    this.database = new DecompDatabase("decomp.db");
+    this.database = new DecompDatabase(process.env.DB_FILE_NAME ?? "decomp.db");
     this.syncer = new ProjectSyncer(this.client, this.database);
     this.watchers = new WatcherService(this.database);
   }
