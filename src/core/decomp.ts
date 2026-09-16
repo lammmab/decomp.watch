@@ -25,7 +25,42 @@ export class Decomp {
       this.syncer.sync().catch((error) => {
         snoop.error("Project sync failed:", error);
       });
+      this.pruneInvalidWatchers().catch((error) => {
+        snoop.error("Watcher pruning failed:", error);
+      });
     });
+  }
+
+  async pruneInvalidWatchers() {
+    const watchers = await this.database.getAllWatchers();
+
+    const pruneResults = await Promise.all(
+      watchers.map(async (watcher) => {
+        try {
+          const guild = await this.client.guilds.fetch(watcher.guildId);
+          if (!guild) {
+            return watcher.id;
+          }
+
+          const channel = await guild.channels.fetch(watcher.channelId);
+          if (!channel) {
+            return watcher.id;
+          }
+
+          return null;
+        } catch (error) {
+          snoop.warn(`Failed to verify watcher ${watcher.id}:`, error);
+          return watcher.id;
+        }
+      }),
+    );
+
+    const watchersToRemove = pruneResults.filter((id): id is number => id !== null);
+
+    if (watchersToRemove.length > 0) {
+      await Promise.all(watchersToRemove.map((id) => this.database.removeWatcher(id)));
+      snoop.info(`Pruned ${watchersToRemove.length} invalid watcher(s)`);
+    }
   }
 
   stop() {

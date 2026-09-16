@@ -145,6 +145,10 @@ export class DecompDatabase {
       );
   }
 
+  public async getAllWatchers() {
+    return await this.db.select().from(schema.watchers);
+  }
+
   public async setTrackingMessageId(id: number, messageId: string) {
     const [row] = await this.db
       .update(schema.watchers)
