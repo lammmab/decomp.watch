@@ -10,6 +10,7 @@
  * to its human-readable display name.
  */
 export const platforms = {
+  "3ds": "Nintendo 3DS",
   n64: "Nintendo 64",
   wii: "Wii",
   gc: "GameCube",
@@ -17,7 +18,9 @@ export const platforms = {
   gba: "Game Boy Advance",
   nds: "Nintendo DS",
   xbox360: "Xbox 360",
+  ps: "PlayStation",
   ps2: "PlayStation 2",
+  psp: "PlayStation Portable",
   xbox: "Xbox",
   switch: "Nintendo Switch",
 } as const;
@@ -178,7 +181,9 @@ export async function getProjects(): Promise<DecompStatus[]> {
   return projects.map((project): DecompStatus => {
     type PlatformKey = keyof typeof platforms;
     const platformId: PlatformId =
-      project.platform in platforms ? (project.platform as PlatformKey) : "n64";
+      project.platform in platforms
+        ? (project.platform as PlatformKey)
+        : (project.platform as PlatformId);
     return {
       id: project.id,
       platformId,

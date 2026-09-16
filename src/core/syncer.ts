@@ -74,7 +74,7 @@ export class ProjectSyncer {
       const embedProject = toEmbedProject(status);
 
       // Update only project-specific watchers (platform watchers are updated in bulk later)
-      await this.updatePersistentEmbed(status.id, embedProject);
+      await this.updatePersistentEmbed(status.id, status.platformId, embedProject);
 
       if (status.percentage >= 100) {
         await this.announceCompletion(status.id, status.platformId, embedProject);
@@ -103,8 +103,12 @@ export class ProjectSyncer {
     this.firstLoad = false;
   }
 
-  private async updatePersistentEmbed(projectId: number, embedProject: Project) {
-    const watchers = await this.database.getWatchersForProject(projectId, embedProject.name);
+  private async updatePersistentEmbed(
+    projectId: number,
+    platformId: string,
+    embedProject: Project,
+  ) {
+    const watchers = await this.database.getWatchersForProject(projectId, platformId);
     // platform watchers are handled separately
     const projectWatchers = watchers.filter((w) => w.projectId !== null);
     const embed = projectEmbed(embedProject);
