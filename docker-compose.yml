@@ -1,6 +1,6 @@
 services:
   decomp:
-    image: decomp-bot:latest
+    image: ghcr.io/lammmab/decomp.watch:latest
     build:
       context: .
       dockerfile: docker/Dockerfile
