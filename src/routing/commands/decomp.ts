@@ -9,6 +9,7 @@ import {
 } from "discord.js";
 
 import { handleGet } from "./get";
+import { handleUnwatchPlatform, handleUnwatchRepo } from "./unwatch";
 import { handleWatchPlatform, handleWatchRepo } from "./watch";
 
 export async function handleAutocomplete(
@@ -122,6 +123,44 @@ export default {
             .setRequired(true)
             .setAutocomplete(true),
         ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("unwatch-project")
+        .setDescription("Stop watching a specific project")
+        .addStringOption((option) =>
+          option
+            .setName("project")
+            .setDescription("The project's repository URL or name")
+            .setRequired(true)
+            .setAutocomplete(true),
+        )
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("Channel to remove watcher from")
+            .addChannelTypes(ChannelType.GuildText)
+            .setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("unwatch-platform")
+        .setDescription("Stop watching all projects on a platform")
+        .addStringOption((option) =>
+          option
+            .setName("platform_name")
+            .setDescription("e.g. Nintendo 64, GameCube")
+            .setRequired(true)
+            .setAutocomplete(true),
+        )
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("Channel to remove watcher from")
+            .addChannelTypes(ChannelType.GuildText)
+            .setRequired(true),
+        ),
     ),
 
   async execute(decomp: Decomp, interaction: ChatInputCommandInteraction) {
@@ -132,6 +171,10 @@ export default {
         return handleWatchPlatform(decomp, interaction);
       case "get":
         return handleGet(decomp, interaction);
+      case "unwatch-project":
+        return handleUnwatchRepo(decomp, interaction);
+      case "unwatch-platform":
+        return handleUnwatchPlatform(decomp, interaction);
     }
   },
 } satisfies DecompCommand;
