@@ -8,8 +8,8 @@ import {
   projectEmbed,
   type Project,
 } from "@utility/embed";
+import { logger } from "@utility/log-buffer";
 import { ActivityType, Client, TextChannel } from "discord.js";
-import { snooplogg as snoop } from "snooplogg";
 
 function toEmbedProject(status: DecompStatus): Project {
   return {
@@ -120,7 +120,7 @@ export class ProjectSyncer {
           await message.edit({ embeds: [embed] });
           continue;
         } catch (error) {
-          snoop.error(
+          logger.error(
             `Failed to edit tracking message for watcher ${watcher.id}, resending:`,
             error,
           );
@@ -185,7 +185,7 @@ export class ProjectSyncer {
       const channel = await this.client.channels.fetch(channelId);
       return channel instanceof TextChannel ? channel : undefined;
     } catch (error) {
-      snoop.error(`Failed to fetch channel ${channelId}:`, error);
+      logger.error(`Failed to fetch channel ${channelId}:`, error);
       return undefined;
     }
   }
@@ -214,7 +214,7 @@ export class ProjectSyncer {
             await message.edit({ embeds });
             continue;
           } catch (error) {
-            snoop.error(
+            logger.error(
               `Failed to edit platform tracking message for watcher ${watcher.id}, resending:`,
               error,
             );

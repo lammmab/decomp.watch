@@ -1,5 +1,5 @@
 import { Decomp } from "@core/decomp";
-import { snooplogg as snoop } from "snooplogg";
+import { logger } from "@utility/log-buffer";
 
 const decomp = new Decomp();
 await decomp.start(process.env.DISCORD_TOKEN!);
@@ -17,9 +17,9 @@ process.on("SIGTERM", async () => {
 });
 
 process.on("unhandledRejection", (error) => {
-  snoop.error("Unhandled rejection:", error);
+  logger.error("Unhandled rejection:", error);
 });
 
 process.on("uncaughtException", (error) => {
-  snoop.error("Uncaught exception:", error);
+  logger.error("Uncaught exception:", error);
 });

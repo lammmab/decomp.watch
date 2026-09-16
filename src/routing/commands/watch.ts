@@ -1,9 +1,9 @@
 import { resolvePlatformId, normalizeRepoUrl } from "@core/api";
 import type { Decomp } from "@core/decomp";
 import { platformEmbed, projectEmbed, type Project } from "@utility/embed";
+import { logger } from "@utility/log-buffer";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { MessageFlags, TextChannel } from "discord.js";
-import { snooplogg as snoop } from "snooplogg";
 
 export async function handleWatchRepo(decomp: Decomp, interaction: ChatInputCommandInteraction) {
   const repoUrl = normalizeRepoUrl(interaction.options.getString("project", true));
@@ -84,7 +84,7 @@ export async function handleWatchRepo(decomp: Decomp, interaction: ChatInputComm
       flags: MessageFlags.Ephemeral,
     });
   } catch (error) {
-    snoop.error(`Failed to create watcher for project ${project.id}:`, error);
+    logger.error(`Failed to create watcher for project ${project.id}:`, error);
     await interaction.reply({
       content: `Failed to create watcher. I may not have permission to send messages in <#${channel.id}>.`,
       flags: MessageFlags.Ephemeral,
@@ -180,7 +180,7 @@ export async function handleWatchPlatform(
       flags: MessageFlags.Ephemeral,
     });
   } catch (error) {
-    snoop.error(`Failed to create platform watcher for ${platformId}:`, error);
+    logger.error(`Failed to create platform watcher for ${platformId}:`, error);
     await interaction.reply({
       content: `Failed to create watcher. I may not have permission to send messages in <#${channel.id}>.`,
       flags: MessageFlags.Ephemeral,

@@ -2,9 +2,9 @@ import { ProjectSyncer } from "@core/syncer";
 import { WatcherService } from "@core/watcher-service";
 import { DecompDatabase } from "@db/database";
 import { DecompRouter } from "@routing/router.js";
+import { logger } from "@utility/log-buffer";
 import { Client, GatewayIntentBits } from "discord.js";
 import cron, { type ScheduledTask } from "node-cron";
-import { snooplogg as snoop } from "snooplogg";
 
 export class Decomp {
   router: DecompRouter;
@@ -23,10 +23,10 @@ export class Decomp {
     await this.syncer.sync();
     this.syncTask = cron.schedule("*/30 * * * *", () => {
       this.syncer.sync().catch((error) => {
-        snoop.error("Project sync failed:", error);
+        logger.error("Project sync failed:", error);
       });
       this.pruneInvalidWatchers().catch((error) => {
-        snoop.error("Watcher pruning failed:", error);
+        logger.error("Watcher pruning failed:", error);
       });
     });
   }
@@ -49,7 +49,7 @@ export class Decomp {
 
           return null;
         } catch (error) {
-          snoop.warn(`Failed to verify watcher ${watcher.id}:`, error);
+          logger.warn(`Failed to verify watcher ${watcher.id}:`, error);
           return watcher.id;
         }
       }),
@@ -59,7 +59,7 @@ export class Decomp {
 
     if (watchersToRemove.length > 0) {
       await Promise.all(watchersToRemove.map((id) => this.database.removeWatcher(id)));
-      snoop.info(`Pruned ${watchersToRemove.length} invalid watcher(s)`);
+      logger.info(`Pruned ${watchersToRemove.length} invalid watcher(s)`);
     }
   }
 
